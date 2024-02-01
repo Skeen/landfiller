@@ -1,22 +1,22 @@
 import os
-import sys
 import platform
-from typing import Annotated
-from typing import Optional
+import sys
 from pathlib import Path
 from textwrap import dedent
+from typing import Annotated
+from typing import Optional
 
+import draftsman.data.tiles
 import pyperclip
 import typer
 from draftsman.blueprintable import Blueprint
-from draftsman.tile import Tile
-
 from draftsman.env import update
+from draftsman.tile import Tile
 from rich import print
+from rich.progress import Progress
+from rich.progress import SpinnerColumn
+from rich.progress import TextColumn
 from rich.progress import track
-from rich.progress import Progress, SpinnerColumn, TextColumn
-
-import draftsman.data.tiles
 
 
 def envvar(varname: str) -> dict[str, str | bool]:
@@ -74,7 +74,7 @@ def main(
             help="Consume the input blueprint from the clipboard.",
             rich_help_panel="IO Control",
             **envvar("clip-in"),
-        )
+        ),
     ] = False,
     clipboard_output: Annotated[
         bool,
@@ -83,7 +83,7 @@ def main(
             help="Output the modified blueprint to the clipboard.",
             rich_help_panel="IO Control",
             **envvar("clip-out"),
-        )
+        ),
     ] = False,
     modpath: Annotated[
         Optional[Path],
@@ -98,7 +98,16 @@ def main(
             resolve_path=True,
             **envvar("modpath"),
         ),
-    ] = modpath(),  # "~/.factorio/mods/",
+    ] = modpath(),
+    ignore_mods: Annotated[
+        bool,
+        typer.Option(
+            "--ignore-mods",
+            help="Ignore mods even if detected.",
+            rich_help_panel="Configuration",
+            **envvar("ignore-mods"),
+        ),
+    ] = False,
     landfill: Annotated[
         str,
         typer.Option(
@@ -139,7 +148,7 @@ def main(
     else:
         blueprint_string = input.read()
 
-    if modpath:
+    if modpath and not ignore_mods:
         with Progress(SpinnerColumn(), TextColumn("{task.description}")) as progress:
             progress.add_task(description="Loading Mods...", total=None)
             update(verbose=False, path=str(modpath))
@@ -171,11 +180,11 @@ def main(
         ecolset = entity.get_world_collision_set()
         bb = ecolset.get_bounding_box()
 
-        start_x = round(bb.world_top_left[0]) - 1
-        end_x = round(bb.world_bot_right[0]) + 1
+        start_x = round(bb.world_top_left[0]) - 2
+        end_x = round(bb.world_bot_right[0]) + 2
 
-        start_y = round(bb.world_top_left[1]) - 1
-        end_y = round(bb.world_bot_right[1]) + 1
+        start_y = round(bb.world_top_left[1]) - 2
+        end_y = round(bb.world_bot_right[1]) + 2
 
         for tx in range(start_x, end_x):
             for ty in range(start_y, end_y):
